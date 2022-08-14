@@ -85,15 +85,7 @@ def getRailStopETAs(predictions):
 #add a dummy entry to force a list, otherwise if there is only one arrival prediction things break
 # print(predictions_dict['bustime-response']['prd'])
 
-
-while True:
-    time.sleep(60)
-    # print(getRailStopPredictions('30017'))
-    # print(getRailStopPredictions('30016'))
-    # print(getRailStopETAs(getRailStopPredictions('30017')))
-    # print(getRailStopETAs(getRailStopPredictions('30016')))
-    # print(getBusStopETAs(getBusStopPredictions('12554')))
-    # client.publish("CTApredictions/BUS/5670", getBusStopETAs(getBusStopPredictions('5670'))[0])
+def updatePredictions():
     client.publish("CTApredictions/BUS/5670/80", getBusStopETAs(getBusStopPredictions('5670','80'))[0])
     # client.publish("CTApredictions/BUS/5676", getBusStopETAs(getBusStopPredictions('5676'))[0])
     client.publish("CTApredictions/BUS/5676/X9", getBusStopETAs(getBusStopPredictions('5676','X9'))[0])
@@ -102,10 +94,18 @@ while True:
     client.publish("CTApredictions/BUS/1056/X9", getBusStopETAs(getBusStopPredictions('1056','X9'))[0])
     client.publish("CTApredictions/BUS/1056/151", getBusStopETAs(getBusStopPredictions('1056','151'))[0])
     client.publish("CTApredictions/BUS/1169/151", getBusStopETAs(getBusStopPredictions('1169','151'))[0])
-    client.publish("CTApredictions/BUS/14880/36", getBusStopETAs(getBusStopPredictions('14880','36'))[0])
-    client.publish("CTApredictions/BUS/5673/36", getBusStopETAs(getBusStopPredictions('5673','36'))[0])
-    client.publish("CTApredictions/BUS/5656/8", getBusStopETAs(getBusStopPredictions('5756','8'))[0])
-    client.publish("CTApredictions/BUS/17390/8", getBusStopETAs(getBusStopPredictions('17390','8'))[0])
+    # client.publish("CTApredictions/BUS/14880/36", getBusStopETAs(getBusStopPredictions('14880','36'))[0])
+    # client.publish("CTApredictions/BUS/5673/36", getBusStopETAs(getBusStopPredictions('5673','36'))[0])
+    # client.publish("CTApredictions/BUS/5656/8", getBusStopETAs(getBusStopPredictions('5756','8'))[0])
+    # client.publish("CTApredictions/BUS/17390/8", getBusStopETAs(getBusStopPredictions('17390','8'))[0])
     client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
     client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
 
+
+while True:
+    try:
+        updatePredictions()
+    except:
+        pass
+
+    time.sleep(60)
