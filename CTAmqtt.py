@@ -57,8 +57,9 @@ def getRailStopETAs(predictions):
         print(prediction.arrT)
         predictedArrival=datetime.datetime.strptime(prediction.arrT.text,'%Y%m%d %H:%M:%S')
         eta = predictedArrival - timenow
-        print(eta)
+        print(eta.seconds)
         etaList.append(eta.seconds)
+ 
     return etaList
 
 # while True:
@@ -103,6 +104,7 @@ def updatePredictions():
 
 
 while True:
+    
     try:
         updatePredictions()
     except:
