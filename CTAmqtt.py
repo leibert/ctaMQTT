@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from lxml import etree, objectify
 from io import StringIO, BytesIO
 
-mqttBroker ="192.168.0.101" 
+mqttBroker ="albany.local" 
 apikey_bus= 'REMOVED_BUS_API_KEY'
 apikey_rail= 'REMOVED_RAIL_API_KEY'
 
