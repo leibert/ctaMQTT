@@ -18,8 +18,6 @@ client = mqtt.Client("Temperature_Inside")
 client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
 client.connect(mqttBroker) 
 
-timenow= datetime.datetime.now()
-
 
 
 def getRailStopPredictions(platformID):
@@ -104,7 +102,7 @@ def updatePredictions():
 
 
 while True:
-    
+    timenow= datetime.datetime.now()
     try:
         updatePredictions()
     except:
