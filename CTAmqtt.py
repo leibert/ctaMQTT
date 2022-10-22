@@ -38,10 +38,10 @@ def getBusStopETAs(predictions):
         return etaList
 
     for prediction in predictions.prd:
-        print(prediction)
+#        print(prediction)
         predictedArrival=datetime.datetime.strptime(prediction.prdtm.text,'%Y%m%d %H:%M')
         eta = predictedArrival - timenow
-        print(eta)
+ #       print(eta)
         etaList.append(eta.seconds)
     return etaList
     
@@ -52,10 +52,10 @@ def getRailStopETAs(predictions):
         return etaList
 
     for prediction in predictions.eta:
-        print(prediction.arrT)
+  #      print(prediction.arrT)
         predictedArrival=datetime.datetime.strptime(prediction.arrT.text,'%Y%m%d %H:%M:%S')
         eta = predictedArrival - timenow
-        print(eta.seconds)
+   #     print(eta.seconds)
         etaList.append(eta.seconds)
  
     return etaList
@@ -100,12 +100,18 @@ def updatePredictions():
     client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
     client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
 
+print("starting CTA script")
+print(datetime.datetime.now())
 
 while True:
     timenow= datetime.datetime.now()
     try:
         updatePredictions()
-    except:
-        pass
-
-    time.sleep(60)
+    except Exception as e:
+        print("exception")
+        print(timenow)
+        print(e)
+#        pass
+  #  print("CTA MQTT values updated")
+   # print(timenow)
+    time.sleep(20)
