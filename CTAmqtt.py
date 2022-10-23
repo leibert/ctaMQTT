@@ -16,6 +16,35 @@ apikey_rail= 'REMOVED_RAIL_API_KEY'
 
 client = mqtt.Client("Temperature_Inside")
 client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
+
+def on_connect(client, userdata, flags, rc):
+    print("initial connection made")
+    print(datetime.datetime.now())
+
+    if rc==0:
+        print("connected OK Returned code=",rc)
+        print(client)
+    else:
+        print("Bad connection Returned code=",rc)
+
+def on_disconnect(client, userdata, rc):
+   print("Client Got Disconnected")
+   print(datetime.datetime.now())
+   if rc != 0:
+       print('Unexpected MQTT disconnection. Will auto-reconnect')
+
+   else:
+       print('rc value:' + str(rc))
+
+   try:
+       print("Trying to Reconnect")
+       client.connect(mqttBroker)
+
+   except:
+       print("Error in Retrying to Connect with Broker")
+
+client.on_connect = on_connect
+client.on_disconnect = on_disconnect
 client.connect(mqttBroker) 
 
 
@@ -23,7 +52,7 @@ client.connect(mqttBroker)
 def getRailStopPredictions(platformID):
     x=requests.get('http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx', params={'key':apikey_rail, 'stpid':platformID})
     predictionsObject=objectify.fromstring(x.text.encode('utf-8'))
-    print(x.text)
+    # print(x.text)
     return predictionsObject
 
 def getBusStopPredictions(stopID, route=None):
@@ -103,6 +132,12 @@ def updatePredictions():
 
 print("starting CTA script")
 print(datetime.datetime.now())
+
+
+
+
+
+
 
 while True:
     timenow= datetime.datetime.now()
