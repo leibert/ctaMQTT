@@ -23,6 +23,7 @@ client.connect(mqttBroker)
 def getRailStopPredictions(platformID):
     x=requests.get('http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx', params={'key':apikey_rail, 'stpid':platformID})
     predictionsObject=objectify.fromstring(x.text.encode('utf-8'))
+    print(x.text)
     return predictionsObject
 
 def getBusStopPredictions(stopID, route=None):
@@ -112,6 +113,6 @@ while True:
         print(timenow)
         print(e)
 #        pass
-  #  print("CTA MQTT values updated")
-   # print(timenow)
+    print("CTA MQTT values updated")
+    print(timenow)
     time.sleep(20)
