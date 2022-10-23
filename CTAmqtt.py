@@ -14,8 +14,7 @@ apikey_bus= 'REMOVED_BUS_API_KEY'
 apikey_rail= 'REMOVED_RAIL_API_KEY'
 
 
-client = mqtt.Client("Temperature_Inside")
-client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
+
 
 def on_connect(client, userdata, flags, rc):
     print("initial connection made")
@@ -43,6 +42,9 @@ def on_disconnect(client, userdata, rc):
    except:
        print("Error in Retrying to Connect with Broker")
 
+client = mqtt.Client()
+client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
+print("attempting mqtt connections")
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.connect(mqttBroker) 
@@ -148,6 +150,6 @@ while True:
         print(timenow)
         print(e)
 #        pass
-    print("CTA MQTT values updated")
-    print(timenow)
+    # print("CTA MQTT values updated")
+    # print(timenow)
     time.sleep(20)
