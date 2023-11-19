@@ -42,14 +42,6 @@ def on_disconnect(client, userdata, rc):
    except:
        print("Error in Retrying to Connect with Broker")
 
-client = mqtt.Client()
-client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
-print("attempting mqtt connections")
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.connect(mqttBroker) 
-
-
 
 def getRailStopPredictions(platformID):
     x=requests.get('http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx', params={'key':apikey_rail, 'stpid':platformID})
@@ -132,24 +124,42 @@ def updatePredictions():
     client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
     client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
 
+
+
+client = mqtt.Client()
+client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
 print("starting CTA script")
 print(datetime.datetime.now())
 
 
 
+if __name__ == "__main__":    
+    #START MAIN LOOP
+    print("main loop init")
 
-
-
-
-while True:
-    timenow= datetime.datetime.now()
     try:
-        updatePredictions()
-    except Exception as e:
-        print("exception")
-        print(timenow)
-        print(e)
-#        pass
-    # print("CTA MQTT values updated")
-    # print(timenow)
-    time.sleep(20)
+        print("attempting mqtt connections")
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.connect(mqttBroker) 
+
+    except ConnectionRefusedError:
+        logger.info("connection refused error")
+
+    except Exception as err:
+        logger.info("other error")
+        logger.info(err)
+
+
+    while True:
+        timenow= datetime.datetime.now()
+        try:
+            updatePredictions()
+        except Exception as e:
+            print("exception")
+            print(timenow)
+            print(e)
+    #        pass
+        # print("CTA MQTT values updated")
+        # print(timenow)
+        time.sleep(20)
