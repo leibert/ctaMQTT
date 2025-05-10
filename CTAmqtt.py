@@ -1,4 +1,5 @@
-
+import logging
+import logging.handlers
 from platform import platform
 import paho.mqtt.client as mqtt 
 from random import randrange, uniform
@@ -9,10 +10,14 @@ import xml.etree.ElementTree as ET
 from lxml import etree, objectify
 from io import StringIO, BytesIO
 
-mqttBroker ="192.168.0.101" 
+mqttBroker ="REMOVED_IP_ADDRESS" 
 apikey_bus= 'REMOVED_BUS_API_KEY'
 apikey_rail= 'REMOVED_RAIL_API_KEY'
 
+logger = logging.getLogger('Logging')
+logger.setLevel(logging.ERROR)
+handler = logging.handlers.SysLogHandler(address = '/dev/log')
+logger.addHandler(handler)
 
 
 
@@ -109,20 +114,48 @@ def getRailStopETAs(predictions):
 # print(predictions_dict['bustime-response']['prd'])
 
 def updatePredictions():
-    client.publish("CTApredictions/BUS/5670/80", getBusStopETAs(getBusStopPredictions('5670','80'))[0])
-    # client.publish("CTApredictions/BUS/5676", getBusStopETAs(getBusStopPredictions('5676'))[0])
-    client.publish("CTApredictions/BUS/5676/X9", getBusStopETAs(getBusStopPredictions('5676','X9'))[0])
-    client.publish("CTApredictions/BUS/5676/80", getBusStopETAs(getBusStopPredictions('5676','80'))[0])
+    # client.publish("CTApredictions/BUS/5676", getBusStopETAs(getBusStopPredictions('5676'))[0])    
     # client.publish("CTApredictions/BUS/1056", getBusStopETAs(getBusStopPredictions('1056'))[0])
-    client.publish("CTApredictions/BUS/1056/X9", getBusStopETAs(getBusStopPredictions('1056','X9'))[0])
-    client.publish("CTApredictions/BUS/1056/151", getBusStopETAs(getBusStopPredictions('1056','151'))[0])
-    client.publish("CTApredictions/BUS/1169/151", getBusStopETAs(getBusStopPredictions('1169','151'))[0])
     # client.publish("CTApredictions/BUS/14880/36", getBusStopETAs(getBusStopPredictions('14880','36'))[0])
     # client.publish("CTApredictions/BUS/5673/36", getBusStopETAs(getBusStopPredictions('5673','36'))[0])
     # client.publish("CTApredictions/BUS/5656/8", getBusStopETAs(getBusStopPredictions('5756','8'))[0])
     # client.publish("CTApredictions/BUS/17390/8", getBusStopETAs(getBusStopPredictions('17390','8'))[0])
-    client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
-    client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
+    
+    # 949 DAKIN BUS INFO
+    # client.publish("CTApredictions/BUS/5670/80", getBusStopETAs(getBusStopPredictions('5670','80'))[0])
+    # client.publish("CTApredictions/BUS/5676/X9", getBusStopETAs(getBusStopPredictions('5676','X9'))[0])
+    # client.publish("CTApredictions/BUS/5676/80", getBusStopETAs(getBusStopPredictions('5676','80'))[0])
+    # client.publish("CTApredictions/BUS/1056/X9", getBusStopETAs(getBusStopPredictions('1056','X9'))[0])
+    # client.publish("CTApredictions/BUS/1056/151", getBusStopETAs(getBusStopPredictions('1056','151'))[0])
+    # client.publish("CTApredictions/BUS/1169/151", getBusStopETAs(getBusStopPredictions('1169','151'))[0])
+    # client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
+    # client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
+
+    # 2970 NLSD BUS INFO
+    #Sheridan East (Northbound)
+    client.publish("CTApredictions/BUS/1151/77", getBusStopETAs(getBusStopPredictions('1151','77'))[0])
+    client.publish("CTApredictions/BUS/1151/151", getBusStopETAs(getBusStopPredictions('1151','151'))[0])
+    
+    #Sheridan West (Southbound)
+    client.publish("CTApredictions/BUS/1074/151", getBusStopETAs(getBusStopPredictions('1074','151'))[0])
+    #Sheridan Loop Buses
+    client.publish("CTApredictions/BUS/1074/134", getBusStopETAs(getBusStopPredictions('1074','134'))[0])
+    client.publish("CTApredictions/BUS/1074/143", getBusStopETAs(getBusStopPredictions('1074','143'))[0])
+    client.publish("CTApredictions/BUS/1074/156", getBusStopETAs(getBusStopPredictions('1074','156'))[0])
+
+    #figure out the next downtown bus
+    dtwnBuses=[]
+    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','134'))[0])
+    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','143'))[0])
+    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','156'))[0])
+    #take the minimum of the individual bus predictions
+    client.publish("CTApredictions/BUS/dwtnEXP", min(dtwnBuses))
+    
+    #2970 NLSD TRAIN INFO
+    #Wellington Northbound
+    client.publish("CTApredictions/RAIL/30231", getRailStopETAs(getRailStopPredictions('30231'))[0])
+    #Wellington Southbound
+    client.publish("CTApredictions/RAIL/30232", getRailStopETAs(getRailStopPredictions('30232'))[0])
 
 
 
@@ -162,4 +195,4 @@ if __name__ == "__main__":
     #        pass
         # print("CTA MQTT values updated")
         # print(timenow)
-        time.sleep(20)
+        time.sleep(30)
