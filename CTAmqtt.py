@@ -1,198 +1,140 @@
 import logging
 import logging.handlers
-from platform import platform
-import paho.mqtt.client as mqtt 
-from random import randrange, uniform
+import paho.mqtt.client as mqtt
 import requests
-import time, datetime
-import xmltodict
-import xml.etree.ElementTree as ET
-from lxml import etree, objectify
-from io import StringIO, BytesIO
+import time
+import datetime
+from lxml import objectify
+from config import Config
 
-mqttBroker ="REMOVED_IP_ADDRESS" 
-apikey_bus= 'REMOVED_BUS_API_KEY'
-apikey_rail= 'REMOVED_RAIL_API_KEY'
-
-logger = logging.getLogger('Logging')
-logger.setLevel(logging.ERROR)
-handler = logging.handlers.SysLogHandler(address = '/dev/log')
-logger.addHandler(handler)
-
-
-
-def on_connect(client, userdata, flags, rc):
-    print("initial connection made")
-    print(datetime.datetime.now())
-
-    if rc==0:
-        print("connected OK Returned code=",rc)
-        print(client)
-    else:
-        print("Bad connection Returned code=",rc)
-
-def on_disconnect(client, userdata, rc):
-   print("Client Got Disconnected")
-   print(datetime.datetime.now())
-   if rc != 0:
-       print('Unexpected MQTT disconnection. Will auto-reconnect')
-
-   else:
-       print('rc value:' + str(rc))
-
-   try:
-       print("Trying to Reconnect")
-       client.connect(mqttBroker)
-
-   except:
-       print("Error in Retrying to Connect with Broker")
-
-
-def getRailStopPredictions(platformID):
-    x=requests.get('http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx', params={'key':apikey_rail, 'stpid':platformID})
-    predictionsObject=objectify.fromstring(x.text.encode('utf-8'))
-    # print(x.text)
-    return predictionsObject
-
-def getBusStopPredictions(stopID, route=None):
-    x=requests.get('http://www.ctabustracker.com/bustime/api/v2/getpredictions', params={'key':apikey_bus, 'stpid':stopID, 'rt':route})
-    predictionsObject=objectify.fromstring(x.text)
-    return predictionsObject
-
-
-def getBusStopETAs(predictions):
-    etaList=[]
-    if not hasattr(predictions,'prd'):
-        etaList.append(-1)
-        return etaList
-
-    for prediction in predictions.prd:
-#        print(prediction)
-        predictedArrival=datetime.datetime.strptime(prediction.prdtm.text,'%Y%m%d %H:%M')
-        eta = predictedArrival - timenow
- #       print(eta)
-        etaList.append(eta.seconds)
-    return etaList
+class CTATransitAPI:
+    """Base class for CTA API interactions"""
+    def get_predictions(self, stop_id):
+        raise NotImplementedError
     
-def getRailStopETAs(predictions):
-    etaList=[]
-    if not hasattr(predictions,'eta'):
-        etaList.append(-1)
-        return etaList
+    def get_etas(self, predictions):
+        raise NotImplementedError
 
-    for prediction in predictions.eta:
-  #      print(prediction.arrT)
-        predictedArrival=datetime.datetime.strptime(prediction.arrT.text,'%Y%m%d %H:%M:%S')
-        eta = predictedArrival - timenow
-   #     print(eta.seconds)
-        etaList.append(eta.seconds)
- 
-    return etaList
+class CTABusAPI(CTATransitAPI):
+    """Handles CTA Bus API interactions"""
+    def get_predictions(self, stop_id, route=None):
+        params = {'key': Config.API_KEY_BUS, 'stpid': stop_id, 'rt': route}
+        response = requests.get(f'{Config.BUS_API_URL}/getpredictions', params=params)
+        return objectify.fromstring(response.text)
 
-# while True:
-#     randNumber = uniform(20.0, 21.0)
-#     client.publish("TEMPERATURE", randNumber)
-#     print("Just published " + str(randNumber) + " to topic TEMPERATURE")
-#     time.sleep(1)
+    def get_etas(self, predictions, current_time):
+        eta_list = []
+        if not hasattr(predictions, 'prd'):
+            return [-1]
+        
+        for prediction in predictions.prd:
+            predicted_arrival = datetime.datetime.strptime(prediction.prdtm.text, '%Y%m%d %H:%M')
+            eta = predicted_arrival - current_time
+            eta_list.append(eta.seconds)
+        return eta_list
 
+class CTARailAPI(CTATransitAPI):
+    """Handles CTA Rail API interactions"""
+    def get_predictions(self, platform_id):
+        params = {'key': Config.API_KEY_RAIL, 'stpid': platform_id}
+        response = requests.get(f'{Config.RAIL_API_URL}/ttarrivals.aspx', params=params)
+        return objectify.fromstring(response.text.encode('utf-8'))
 
-#train api REMOVED_RAIL_API_KEY
-# http://lapi.transitchicago.com/api/1.0/ttarrivals.aspx?key=REMOVED_RAIL_API_KEY&mapid=40380
-#bus api REMOVED_BUS_API_KEY
+    def get_etas(self, predictions, current_time):
+        eta_list = []
+        if not hasattr(predictions, 'eta'):
+            return [-1]
+        
+        for prediction in predictions.eta:
+            predicted_arrival = datetime.datetime.strptime(prediction.arrT.text, '%Y%m%d %H:%M:%S')
+            eta = predicted_arrival - current_time
+            eta_list.append(eta.seconds)
+        return eta_list
 
-# x=requests.get('http://www.ctabustracker.com/bustime/api/v2/gettime?key=', params={'key':apikey_bus})
-# x=requests.get('http://www.ctabustracker.com/bustime/api/v2/getpredictions?key=', params={'key':apikey_bus, 'stpid':'5676'})
-# x=requests.get('http://www.ctabustracker.com/bustime/api/v2/getpredictions?key=', params={'key':apikey_bus, 'stpid':'5670'})
+class CTAMQTTClient:
+    """Handles MQTT connection and message publishing"""
+    def __init__(self):
+        self.client = mqtt.Client()
+        self.client.username_pw_set(Config.MQTT_USER, password=Config.MQTT_PASSWORD)
+        self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
+        self.bus_api = CTABusAPI()
+        self.rail_api = CTARailAPI()
+        
+        # Setup logging
+        self.logger = logging.getLogger('CTALogger')
+        self.logger.setLevel(logging.ERROR)
+        handler = logging.handlers.SysLogHandler(address='/dev/log')
+        self.logger.addHandler(handler)
 
+    def _on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            self.logger.info("Successfully connected to MQTT broker")
+        else:
+            self.logger.error(f"Failed to connect to MQTT broker with code {rc}")
 
-# print (x.text)
+    def _on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            self.logger.warning("Unexpected MQTT disconnection. Attempting reconnect...")
+            try:
+                self.client.connect(Config.MQTT_BROKER)
+            except Exception as e:
+                self.logger.error(f"Reconnection failed: {str(e)}")
 
-# predictions_dict=xmltodict.parse(x.text)
-# print(predictions_dict)
-
-#add a dummy entry to force a list, otherwise if there is only one arrival prediction things break
-# print(predictions_dict['bustime-response']['prd'])
-
-def updatePredictions():
-    # client.publish("CTApredictions/BUS/5676", getBusStopETAs(getBusStopPredictions('5676'))[0])    
-    # client.publish("CTApredictions/BUS/1056", getBusStopETAs(getBusStopPredictions('1056'))[0])
-    # client.publish("CTApredictions/BUS/14880/36", getBusStopETAs(getBusStopPredictions('14880','36'))[0])
-    # client.publish("CTApredictions/BUS/5673/36", getBusStopETAs(getBusStopPredictions('5673','36'))[0])
-    # client.publish("CTApredictions/BUS/5656/8", getBusStopETAs(getBusStopPredictions('5756','8'))[0])
-    # client.publish("CTApredictions/BUS/17390/8", getBusStopETAs(getBusStopPredictions('17390','8'))[0])
-    
-    # 949 DAKIN BUS INFO
-    # client.publish("CTApredictions/BUS/5670/80", getBusStopETAs(getBusStopPredictions('5670','80'))[0])
-    # client.publish("CTApredictions/BUS/5676/X9", getBusStopETAs(getBusStopPredictions('5676','X9'))[0])
-    # client.publish("CTApredictions/BUS/5676/80", getBusStopETAs(getBusStopPredictions('5676','80'))[0])
-    # client.publish("CTApredictions/BUS/1056/X9", getBusStopETAs(getBusStopPredictions('1056','X9'))[0])
-    # client.publish("CTApredictions/BUS/1056/151", getBusStopETAs(getBusStopPredictions('1056','151'))[0])
-    # client.publish("CTApredictions/BUS/1169/151", getBusStopETAs(getBusStopPredictions('1169','151'))[0])
-    # client.publish("CTApredictions/RAIL/300016", getRailStopETAs(getRailStopPredictions('30016'))[0])
-    # client.publish("CTApredictions/RAIL/300017", getRailStopETAs(getRailStopPredictions('30017'))[0])
-
-    # 2970 NLSD BUS INFO
-    #Sheridan East (Northbound)
-    client.publish("CTApredictions/BUS/1151/77", getBusStopETAs(getBusStopPredictions('1151','77'))[0])
-    client.publish("CTApredictions/BUS/1151/151", getBusStopETAs(getBusStopPredictions('1151','151'))[0])
-    
-    #Sheridan West (Southbound)
-    client.publish("CTApredictions/BUS/1074/151", getBusStopETAs(getBusStopPredictions('1074','151'))[0])
-    #Sheridan Loop Buses
-    client.publish("CTApredictions/BUS/1074/134", getBusStopETAs(getBusStopPredictions('1074','134'))[0])
-    client.publish("CTApredictions/BUS/1074/143", getBusStopETAs(getBusStopPredictions('1074','143'))[0])
-    client.publish("CTApredictions/BUS/1074/156", getBusStopETAs(getBusStopPredictions('1074','156'))[0])
-
-    #figure out the next downtown bus
-    dtwnBuses=[]
-    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','134'))[0])
-    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','143'))[0])
-    dtwnBuses.append(getBusStopETAs(getBusStopPredictions('1074','156'))[0])
-    #take the minimum of the individual bus predictions
-    client.publish("CTApredictions/BUS/dwtnEXP", min(dtwnBuses))
-    
-    #2970 NLSD TRAIN INFO
-    #Wellington Northbound
-    client.publish("CTApredictions/RAIL/30231", getRailStopETAs(getRailStopPredictions('30231'))[0])
-    #Wellington Southbound
-    client.publish("CTApredictions/RAIL/30232", getRailStopETAs(getRailStopPredictions('30232'))[0])
-
-
-
-client = mqtt.Client()
-client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
-print("starting CTA script")
-print(datetime.datetime.now())
-
-
-
-if __name__ == "__main__":    
-    #START MAIN LOOP
-    print("main loop init")
-
-    try:
-        print("attempting mqtt connections")
-        client.on_connect = on_connect
-        client.on_disconnect = on_disconnect
-        client.connect(mqttBroker) 
-
-    except ConnectionRefusedError:
-        logger.info("connection refused error")
-
-    except Exception as err:
-        logger.info("other error")
-        logger.info(err)
-
-
-    while True:
-        timenow= datetime.datetime.now()
+    def start(self):
+        """Start the MQTT client and prediction updates"""
         try:
-            updatePredictions()
+            self.client.connect(Config.MQTT_BROKER)
+            self.client.loop_start()
+            
+            while True:
+                try:
+                    self._update_predictions()
+                except Exception as e:
+                    self.logger.error(f"Error updating predictions: {str(e)}")
+                time.sleep(30)
+                
         except Exception as e:
-            print("exception")
-            print(timenow)
-            print(e)
-    #        pass
-        # print("CTA MQTT values updated")
-        # print(timenow)
-        time.sleep(30)
+            self.logger.error(f"Fatal error: {str(e)}")
+            raise
+
+    def _update_predictions(self):
+        """Update all bus and train predictions"""
+        current_time = datetime.datetime.now()
+        
+        # 2970 NLSD Bus predictions
+        self._publish_bus_prediction('1151', '77', current_time)
+        self._publish_bus_prediction('1151', '151', current_time)
+        self._publish_bus_prediction('1074', '151', current_time)
+        
+        # Express bus predictions
+        express_routes = ['134', '143', '156']
+        dtwn_times = []
+        for route in express_routes:
+            eta = self._get_bus_eta('1074', route, current_time)
+            dtwn_times.append(eta)
+            self.client.publish(f"CTApredictions/BUS/1074/{route}", eta)
+        
+        self.client.publish("CTApredictions/BUS/dwtnEXP", min(dtwn_times))
+        
+        # Train predictions
+        self._publish_rail_prediction('30231', current_time)  # Wellington Northbound
+        self._publish_rail_prediction('30232', current_time)  # Wellington Southbound
+
+    def _publish_bus_prediction(self, stop_id, route, current_time):
+        eta = self._get_bus_eta(stop_id, route, current_time)
+        self.client.publish(f"CTApredictions/BUS/{stop_id}/{route}", eta)
+
+    def _get_bus_eta(self, stop_id, route, current_time):
+        predictions = self.bus_api.get_predictions(stop_id, route)
+        etas = self.bus_api.get_etas(predictions, current_time)
+        return etas[0]
+
+    def _publish_rail_prediction(self, platform_id, current_time):
+        predictions = self.rail_api.get_predictions(platform_id)
+        etas = self.rail_api.get_etas(predictions, current_time)
+        self.client.publish(f"CTApredictions/RAIL/{platform_id}", etas[0])
+
+if __name__ == "__main__":
+    client = CTAMQTTClient()
+    client.start()
