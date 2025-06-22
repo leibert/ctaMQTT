@@ -1,3 +1,4 @@
+import os
 import logging
 import logging.handlers
 from platform import platform
@@ -10,9 +11,9 @@ import xml.etree.ElementTree as ET
 from lxml import etree, objectify
 from io import StringIO, BytesIO
 
-mqttBroker ="REMOVED_IP_ADDRESS" 
-apikey_bus= 'REMOVED_BUS_API_KEY'
-apikey_rail= 'REMOVED_RAIL_API_KEY'
+mqttBroker = os.environ.get('MQTT_BROKER', 'localhost')
+apikey_bus= os.environ.get('CTA_API_KEY_BUS', None)
+apikey_rail= os.environ.get('CTA_API_KEY_RAIL', None)
 
 logger = logging.getLogger('Logging')
 logger.setLevel(logging.ERROR)
@@ -160,7 +161,7 @@ def updatePredictions():
 
 
 client = mqtt.Client()
-client.username_pw_set("mqtt", password="REMOVED_MQTT_PASSWORD")
+client.username_pw_set(os.environ.get('MQTT_USER','mqtt'), password=os.environ.get('MQTT_PASSWORD', None))
 print("starting CTA script")
 print(datetime.datetime.now())
 
