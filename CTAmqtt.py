@@ -37,7 +37,7 @@ CONFIG = {
     'MQTT_PASSWORD': os.environ.get('MQTT_PASSWORD', None),
     'CTA_API_KEY_BUS': os.environ.get('CTA_API_KEY_BUS', None),
     'CTA_API_KEY_RAIL': os.environ.get('CTA_API_KEY_RAIL', None),
-    'UPDATE_INTERVAL': 30,  # seconds
+    'UPDATE_INTERVAL': int(os.environ.get('UPDATE_INTERVAL',30))  # seconds
 }
 
 # API Endpoints
