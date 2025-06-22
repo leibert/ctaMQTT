@@ -12,8 +12,6 @@ Required environment variables:
 - CTA_API_KEY_BUS: CTA Bus Tracker API key
 - CTA_API_KEY_RAIL: CTA Train Tracker API key
 
-Author: [Your Name]
-Date: [Current Date]
 """
 
 import os
