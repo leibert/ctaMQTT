@@ -262,15 +262,6 @@ Enable debug logging by modifying the logger level:
 logger.setLevel(logging.DEBUG)
 ```
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## License
 
@@ -282,18 +273,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) for MQTT client
 - [lxml](https://lxml.de/) for XML parsing
 
-## Disclaimer
-
-This project is not affiliated with or endorsed by the Chicago Transit Authority. CTA data is used under their terms of service.
-
-## Support
-
-If you find this project helpful, please give it a ⭐ on GitHub!
-
-For issues and questions:
-- Open an [issue](https://github.com/yourusername/cta-mqtt-tracker/issues)
-- Check [existing issues](https://github.com/yourusername/cta-mqtt-tracker/issues?q=is%3Aissue) for solutions
-
----
-
-Made with ❤️ in Chicago 🏙️
